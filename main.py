@@ -17,7 +17,7 @@ pg = st.navigation(pages)
 st.set_page_config(page_title="FAIR Evaluation App", page_icon="🌐", layout="wide")
 
 # GitHub Repository Link in Sidebar
-repo_url = "https://github.com/fairagro/FAIR_evaluation_repository"
+repo_url = "https://github.com/fairagro/fair-er"
 st.sidebar.markdown(
     f'<a href="{repo_url}" target="_blank" style="text-decoration: none; font-weight: bold;">🔗 GitHub Repository</a>',
     unsafe_allow_html=True,

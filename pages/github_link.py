@@ -3,7 +3,7 @@ import streamlit as st
 st.title("FAIR Evaluation Repository")
 
 # GitHub Repository Link
-repo_url = "https://github.com/fairagro/FAIR_evaluation_repository"
+repo_url = "https://github.com/fairagro/fair-er"
 st.markdown(f"[🔗 Visit the FAIR Evaluation Repository on GitHub]({repo_url})")
 
 # Additional Information

@@ -17,6 +17,7 @@ from FC_evaluation import fairchecker_evaluate_to_list ,fc_evaluation_result_exa
 
 from doi_to_dqv import create_dqv_representation  # Function to generate RDF representation
 from rdf_utils import extract_scores_from_rdf  # Utility to extract scores from RDF
+from rdflib import RDF, Namespace
 
 # Example FES and FUJI evaluation results (use provided examples)
 fes_evaluation_result = fes_evaluation_result_example
@@ -58,6 +59,8 @@ if "show_rdf" not in st.session_state:
     st.session_state["show_rdf"] = False
 if "bar_chart" not in st.session_state:
     st.session_state["bar_chart"] = None
+if "evaluation_attempted" not in st.session_state:
+    st.session_state["evaluation_attempted"] = False
 
 def build_grouped_bar_chart(extracted_scores: dict, title: str) -> go.Figure:
     fair_dimensions = ["Findability", "Accessibility", "Interoperability", "Reusability"]
@@ -106,6 +109,52 @@ def build_grouped_bar_chart(extracted_scores: dict, title: str) -> go.Figure:
     )
     return fair_fig
 
+def render_rdf_graph(rdf_graph):
+
+    DQV = Namespace("http://www.w3.org/ns/dqv#")
+
+    def short(uri: str) -> str:
+        return uri.split("/")[-1].split("#")[-1]
+
+    net = Network(height="500px", width="100%")
+
+    seen_nodes: set[str] = set()
+
+    for measurement in rdf_graph.subjects(RDF.type, DQV.QualityMeasurement):
+        metric = rdf_graph.value(measurement, DQV.isMeasurementOf)
+        value = rdf_graph.value(measurement, DQV.value)
+        tool = rdf_graph.value(measurement, DQV.computedBy)
+
+        if not metric or value is None or not tool:
+            continue
+
+        tool_str = str(tool)
+        metric_str = str(metric)
+        value_str = str(value)
+
+        # create unique node id per tool+metric
+        metric_node_id = f"{tool_str}__{metric_str}"
+
+        # tool node
+        if tool_str not in seen_nodes:
+            net.add_node(tool_str, label=short(tool_str), color="orange")
+            seen_nodes.add(tool_str)
+
+        # metric node with value in label
+        if metric_node_id not in seen_nodes:
+            label = f"{short(metric_str)} ({value_str})"
+            net.add_node(metric_node_id, label=label, color="blue")
+            seen_nodes.add(metric_node_id)
+
+        # connect tool → metric
+        net.add_edge(tool_str, metric_node_id)
+
+    net.barnes_hut()
+
+    html = net.generate_html()
+    components.html(html, height=500)
+
+
 # Add per-DOI storage and selection
 if "dqv_by_doi" not in st.session_state:
     st.session_state["dqv_by_doi"] = {}
@@ -120,6 +169,7 @@ if st.button("Generate FAIR Evaluation"):
     st.session_state["show_rdf"] = False
     st.session_state["dqv_by_doi"] = {}
     st.session_state["selected_doi"] = None
+    st.session_state["evaluation_attempted"] = True
 
     # Prepare DOI list (sequential processing across DOIs; FES+FUJI run in parallel per DOI)
     dois_to_process = list(data_dois)
@@ -149,9 +199,11 @@ if st.button("Generate FAIR Evaluation"):
 
                 def _fes_task(doi_1):
                     print(f"[{_now_ts()}] [Thread {threading.current_thread().name}] FES start for DOI: {doi_1}")
-                    res = fes_evaluate_to_list(doi_1)
+                    result, error = fes_evaluate_to_list(doi_1)
                     print(f"[{_now_ts()}] [Thread {threading.current_thread().name}] FES end for DOI: {doi_1}")
-                    return res
+                    if error:
+                        raise RuntimeError(error)
+                    return result
 
                 def _fuji_task(doi_2):
                     print(f"[{_now_ts()}] [Thread {threading.current_thread().name}] FUJI start for DOI: {doi_2}")
@@ -174,45 +226,25 @@ if st.button("Generate FAIR Evaluation"):
                     if include_fc:
                         futures["fc"] = executor.submit(_fc_task, current_doi)
 
-                    # Collect FES result
-                    if "fes" in futures:
+                    # Collect results — all three tasks now share the same error contract:
+                    # success → return value, failure → raise RuntimeError or ConnectTimeout
+                    for key, label in [("fes", "FES"), ("fuji", "FUJI"), ("fc", "FC")]:
+                        if key not in futures:
+                            continue
                         try:
-                            fes_result, fes_error = futures["fes"].result()
-                            fes_evaluation_result_used = fes_result
-                            if fes_error:
-                                st.error(fes_error)
-                        except Exception as e:
-                            st.error(f"FES evaluation failed: {e}")
-                            fes_evaluation_result_used = None
-
-                    # Collect FUJI result
-                    if "fuji" in futures:
-                        try:
-                            fuji_evaluation_result_used = futures["fuji"].result()
+                            result = futures[key].result()
+                            if key == "fes":
+                                fes_evaluation_result_used = result
+                            elif key == "fuji":
+                                fuji_evaluation_result_used = result
+                            else:
+                                fc_evaluation_result_used = result
                         except ConnectTimeout:
-                            st.error("FUJI evaluation timed out. Please check your network connection or try again later.")
-                            fuji_evaluation_result_used = None
+                            st.error(f"{label} evaluation timed out. Please check your network connection or try again later.")
                         except RuntimeError as e:
-                            st.error(f"FUJI evaluation failed: {e}")
-                            fuji_evaluation_result_used = None
+                            st.error(f"{label} evaluation failed: {e}")
                         except Exception as e:
-                            st.error(f"FUJI evaluation failed: {e}")
-                            fuji_evaluation_result_used = None
-
-                    # Collect FC result
-                    if "fc" in futures:
-                        try:
-                            fc_evaluation_result_used = futures["fc"].result()
-                        except ConnectTimeout:
-                            st.error(
-                                "FC evaluation timed out. Please check your network connection or try again later.")
-                            fc_evaluation_result_used = None
-                        except RuntimeError as e:
-                            st.error(f"FC evaluation failed: {e}")
-                            fc_evaluation_result_used = None
-                        except Exception as e:
-                            st.error(f"FC evaluation failed: {e}")
-                            fc_evaluation_result_used = None
+                            st.error(f"{label} evaluation failed: {e}")
 
             # If any result exists for this DOI, build graph and chart (shows last processed DOI)
             if fes_evaluation_result_used or fuji_evaluation_result_used or fc_evaluation_result_used:
@@ -328,7 +360,7 @@ if st.session_state["dqv_by_doi"]:
 elif st.session_state["bar_chart"] and isinstance(st.session_state["bar_chart"], go.Figure):
     # Fallback for single-DOI legacy path
     st.plotly_chart(st.session_state["bar_chart"])
-else:
+elif st.session_state["evaluation_attempted"]:
     st.warning("No valid chart available.")
 
 # Button to toggle RDF graph visualization
@@ -336,26 +368,20 @@ if st.session_state["dqv_representation"] is not None or st.session_state["dqv_b
     if st.button("Visualize RDF Graph"):
         st.session_state["show_rdf"] = not st.session_state["show_rdf"]
 
-    # Conditionally render the RDF graph below the bar chart
     if st.session_state["show_rdf"]:
-        # Use selected DOI graph if available
         rdf_graph = None
-        if st.session_state["dqv_by_doi"] and st.session_state["selected_doi"] in st.session_state["dqv_by_doi"]:
+
+        if (
+            st.session_state["dqv_by_doi"]
+            and st.session_state["selected_doi"] in st.session_state["dqv_by_doi"]
+        ):
             rdf_graph = st.session_state["dqv_by_doi"][st.session_state["selected_doi"]]
         else:
             rdf_graph = st.session_state["dqv_representation"]
-        net = Network(height="500px", width="100%", notebook=True)
 
-        # Add nodes and edges to the Pyvis graph
-        for subj, pred, obj in rdf_graph:
-            net.add_node(str(subj), label=str(subj), color="blue")
-            net.add_node(str(obj), label=str(obj), color="green")
-            net.add_edge(str(subj), str(obj), title=str(pred))
-
-        # Save the Pyvis graph to an HTML file and display it in Streamlit
-        net.save_graph("rdf_graph.html")
-        st.subheader("RDF Graph Visualization")
-        components.html(open("rdf_graph.html", "r").read(), height=500)
+        if rdf_graph is not None:
+            st.subheader("RDF Graph Visualization")
+            render_rdf_graph(rdf_graph)
 
 # Initialize download format selection in the session state
 if "download_format" not in st.session_state:

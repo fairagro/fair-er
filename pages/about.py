@@ -32,7 +32,7 @@ st.write(
 )
 
 st.subheader("Contact")
-st.write("For more information, visit the [FAIRagro GitHub repository](https://github.com/fairagro/FAIR_evaluation_repository).")
+st.write("For more information, visit the [FAIRagro GitHub repository](https://github.com/fairagro/fair-er).")
 
 # Footer
 st.markdown("---")
