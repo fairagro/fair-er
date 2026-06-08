@@ -56,7 +56,7 @@ fes_metric_mapping = {
     }
 }
 
-fuji_metric_mapping = {
+fuji_metric_mapping_v05 = {
     "FsF-F1-01D-1": FAIRAGRO["FsF-GloballyUniqueIdentifierMetric-1"],
     "FsF-F1-01D-2": FAIRAGRO["FsF-GloballyUniqueIdentifierMetric-2"],
     "FsF-F1-02D-1": FAIRAGRO["FsF-PersistentIdentifierMetric-1"],
@@ -98,6 +98,53 @@ fuji_metric_mapping = {
     "FsF-R1.3-02D-1a": FAIRAGRO["FsF-DataFileFormatMetric-1a"],
     "FsF-R1.3-02D-1b": FAIRAGRO["FsF-DataFileFormatMetric-1b"],
     "FsF-R1.3-02D-1c": FAIRAGRO["FsF-DataFileFormatMetric-1c"]
+}
+
+fuji_metric_mapping_v08 = {
+    # F1
+    "FsF-F1-01MD-1": FAIRAGRO["FsF-UniqueMetadataIdentifierMetric-1"],
+    "FsF-F1-01MD-2": FAIRAGRO["FsF-UniqueDataIdentifierMetric-2"],
+    "FsF-F1-02MD-1": FAIRAGRO["FsF-MetadataPIDSyntaxMetric-1"],
+    "FsF-F1-02MD-2": FAIRAGRO["FsF-MetadataPIDRegisteredMetric-2"],
+    "FsF-F1-02MD-4": FAIRAGRO["FsF-DataPIDSyntaxMetric-4"],
+    "FsF-F1-02MD-5": FAIRAGRO["FsF-DataPIDRegisteredMetric-5"],
+    # F2
+    "FsF-F2-01M-2": FAIRAGRO["FsF-DescriptiveCoreMetadataMetric-2"],
+    "FsF-F2-01M-3": FAIRAGRO["FsF-DescriptiveCoreMetadataMetric-3"],
+    # F3
+    "FsF-F3-01M-2": FAIRAGRO["FsF-InclusionOfDataIdentifierInMetadataMetric-2"],
+    # F4
+    "FsF-F4-01M-1": FAIRAGRO["FsF-SearchableMetadataMetric-1"],
+    # A1
+    "FsF-A1-01M-1": FAIRAGRO["FsF-AccessConditionsMetric-1"],
+    "FsF-A1-02MD-1": FAIRAGRO["FsF-MetadataRetrievableMetric-1"],
+    "FsF-A1-02MD-2": FAIRAGRO["FsF-DataRetrievableMetric-2"],
+    # A1.1
+    "FsF-A1.1-01MD-1": FAIRAGRO["FsF-MetadataStandardProtocolMetric-1"],
+    "FsF-A1.1-01MD-2": FAIRAGRO["FsF-DataStandardProtocolMetric-2"],
+    # A1.2
+    "FsF-A1.2-01MD-1": FAIRAGRO["FsF-MetadataAuthProtocolMetric-1"],
+    "FsF-A1.2-01MD-2": FAIRAGRO["FsF-DataAuthProtocolMetric-2"],
+    # I1
+    "FsF-I1-01M-1": FAIRAGRO["FsF-FormalMetadataRepresentationMetric-1"],
+    "FsF-I1-01M-2": FAIRAGRO["FsF-FormalMetadataRepresentationMetric-2"],
+    # I2
+    "FsF-I2-01M-2": FAIRAGRO["FsF-SemanticMetadataResourcesMetric-2"],
+    # I3
+    "FsF-I3-01M-1": FAIRAGRO["FsF-LinksToRelatedEntitiesMetric-1"],
+    "FsF-I3-01M-2": FAIRAGRO["FsF-LinksToRelatedEntitiesMetric-2"],
+    # R1
+    "FsF-R1-01M-1": FAIRAGRO["FsF-ContentDescriptionMetric-1"],
+    "FsF-R1-01M-2": FAIRAGRO["FsF-ContentDescriptionMetric-2"],
+    # R1.1
+    "FsF-R1.1-01M-1": FAIRAGRO["FsF-LicenseInformationMetric-1"],
+    # R1.2
+    "FsF-R1.2-01M-1": FAIRAGRO["FsF-ProvenanceInformationMetric-1"],
+    "FsF-R1.2-01M-2": FAIRAGRO["FsF-ProvenanceInformationMetric-2"],
+    # R1.3
+    "FsF-R1.3-01M-1": FAIRAGRO["FsF-CommunityMetadataStandardMetric-1"],
+    "FsF-R1.3-01M-3": FAIRAGRO["FsF-CommunityMetadataStandardMetric-3"],
+    "FsF-R1.3-02D-1": FAIRAGRO["FsF-DataFileFormatMetric-1"],
 }
 
 fc_metric_mapping = {

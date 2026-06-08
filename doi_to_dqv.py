@@ -5,7 +5,7 @@ from doi_info_fetcher import get_datacite_doi_info
 from FES_evaluation import fes_evaluate_to_list
 from FUJI_evaluation import fuji_evaluate_to_list
 from datetime import datetime
-from metric_mappings import fes_metric_mapping, fuji_metric_mapping, fc_metric_mapping
+from metric_mappings import fes_metric_mapping, fuji_metric_mapping_v05, fuji_metric_mapping_v08, fc_metric_mapping
 
 WRITE_METRICS = False
 WRITE_AGENTS = False
@@ -32,6 +32,16 @@ def create_dqv_representation(doi: str, fes_evaluation_result: list, fuji_evalua
     dataset_info = get_datacite_doi_info(doi)
     if not dataset_info:
         return None
+
+    print("FUJI result keys sample:", list(fuji_evaluation_result.keys())[:5])
+
+    # Versionserkennung anhand eines typischen FUJI v0.8-Schlüssels
+    if "FsF-F1-01MD-1" in fuji_evaluation_result:
+        fuji_metric_mapping = fuji_metric_mapping_v08
+        print("Using F-UJI v0.8 metric mapping")
+    else:
+        fuji_metric_mapping = fuji_metric_mapping_v05
+        print("Using F-UJI v0.5 metric mapping")
 
     g = Graph()
 

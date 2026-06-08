@@ -33,10 +33,6 @@ fair:reusability a dqv:Dimension ;
 
 
 
-# ==============================
-# F-UJI v0.5 metrics (unchanged)
-# ==============================
-
 fair:FsF-GloballyUniqueIdentifierMetric-1 a dqv:Metric ;
     skos:altLabel "FsF-F1-01D-1"@en ;
     skos:definition "Identifier is resolvable and follows a defined unique identifier syntax (IRI, URL)"@en ;
@@ -329,104 +325,6 @@ fair:FsF-DataFileFormatMetric-1c a dqv:Metric ;
 
 
 
-# ==============================
-# F-UJI v0.8 metrics (additional)
-# ==============================
-
-# F1 – Unique and persistent identifiers
-fair:FsF-UniqueMetadataIdentifierMetric-1 a dqv:Metric ;
-    skos:altLabel "FsF-F1-01MD-1"@en ;
-    skos:definition "Metadata identifier follows a defined unique identifier syntax (IRI, URL, UUID, HASH or PID)"@en ;
-    skos:prefLabel "Metric test for FsF-F1-01MD-1"@en ;
-    dqv:expectedDataType xsd:float ;
-    dqv:inDimension fair:findability .
-
-fair:FsF-UniqueDataIdentifierMetric-2 a dqv:Metric ;
-    skos:altLabel "FsF-F1-01MD-2"@en ;
-    skos:definition "Data identifier follows a defined unique identifier syntax (IRI, URL, UUID, HASH or PID)"@en ;
-    skos:prefLabel "Metric test for FsF-F1-01MD-2"@en ;
-    dqv:expectedDataType xsd:float ;
-    dqv:inDimension fair:findability .
-
-fair:FsF-MetadataPIDSyntaxMetric-1 a dqv:Metric ;
-    skos:altLabel "FsF-F1-02MD-1"@en ;
-    skos:definition "Metadata identifier follows a defined persistent identifier syntax"@en ;
-    skos:prefLabel "Metric test for FsF-F1-02MD-1"@en ;
-    dqv:expectedDataType xsd:float ;
-    dqv:inDimension fair:findability .
-
-fair:FsF-MetadataPIDRegisteredMetric-2 a dqv:Metric ;
-    skos:altLabel "FsF-F1-02MD-2"@en ;
-    skos:definition "Persistent identifier for metadata is registered and maintained by a PID authority"@en ;
-    skos:prefLabel "Metric test for FsF-F1-02MD-2"@en ;
-    dqv:expectedDataType xsd:float ;
-    dqv:inDimension fair:findability .
-
-fair:FsF-DataPIDSyntaxMetric-4 a dqv:Metric ;
-    skos:altLabel "FsF-F1-02MD-4"@en ;
-    skos:definition "Data identifier follows a defined persistent identifier syntax"@en ;
-    skos:prefLabel "Metric test for FsF-F1-02MD-4"@en ;
-    dqv:expectedDataType xsd:float ;
-    dqv:inDimension fair:findability .
-
-fair:FsF-DataPIDRegisteredMetric-5 a dqv:Metric ;
-    skos:altLabel "FsF-F1-02MD-5"@en ;
-    skos:definition "Persistent identifier for data is registered and maintained by a PID authority"@en ;
-    skos:prefLabel "Metric test for FsF-F1-02MD-5"@en ;
-    dqv:expectedDataType xsd:float ;
-    dqv:inDimension fair:findability .
-
-# A1 – Retrievability
-fair:FsF-MetadataRetrievableMetric-1 a dqv:Metric ;
-    skos:altLabel "FsF-A1-02MD-1"@en ;
-    skos:definition "Metadata are retrievable via their specified identifier"@en ;
-    skos:prefLabel "Metric test for FsF-A1-02MD-1"@en ;
-    dqv:expectedDataType xsd:float ;
-    dqv:inDimension fair:accessibility .
-
-fair:FsF-DataRetrievableMetric-2 a dqv:Metric ;
-    skos:altLabel "FsF-A1-02MD-2"@en ;
-    skos:definition "Data are retrievable via the identifiers given in metadata"@en ;
-    skos:prefLabel "Metric test for FsF-A1-02MD-2"@en ;
-    dqv:expectedDataType xsd:float ;
-    dqv:inDimension fair:accessibility .
-
-# A1.1 – Standardised protocol
-fair:FsF-MetadataStandardProtocolMetric-1 a dqv:Metric ;
-    skos:altLabel "FsF-A1.1-01MD-1"@en ;
-    skos:definition "Identifier leading to metadata matches a scheme indicating a standardized web communication protocol"@en ;
-    skos:prefLabel "Metric test for FsF-A1.1-01MD-1"@en ;
-    dqv:expectedDataType xsd:float ;
-    dqv:inDimension fair:accessibility .
-
-fair:FsF-DataStandardProtocolMetric-2 a dqv:Metric ;
-    skos:altLabel "FsF-A1.1-01MD-2"@en ;
-    skos:definition "Identifier leading to data matches a scheme indicating a standardized web communication protocol"@en ;
-    skos:prefLabel "Metric test for FsF-A1.1-01MD-2"@en ;
-    dqv:expectedDataType xsd:float ;
-    dqv:inDimension fair:accessibility .
-
-# A1.2 – Authentication support
-fair:FsF-MetadataAuthProtocolMetric-1 a dqv:Metric ;
-    skos:altLabel "FsF-A1.2-01MD-1"@en ;
-    skos:definition "The communication protocol found in identifiers (IRIs) leading to metadata supports authentication"@en ;
-    skos:prefLabel "Metric test for FsF-A1.2-01MD-1"@en ;
-    dqv:expectedDataType xsd:float ;
-    dqv:inDimension fair:accessibility .
-
-fair:FsF-DataAuthProtocolMetric-2 a dqv:Metric ;
-    skos:altLabel "FsF-A1.2-01MD-2"@en ;
-    skos:definition "The communication protocol identified in data links (IRIs) supports authentication"@en ;
-    skos:prefLabel "Metric test for FsF-A1.2-01MD-2"@en ;
-    dqv:expectedDataType xsd:float ;
-    dqv:inDimension fair:accessibility .
-
-
-
-# ==============================
-# FES metrics (unchanged)
-# ==============================
-
 fair:FES-UniqueIdentifierMetric a dqv:Metric ;
     skos:prefLabel "Unique Identifier"@en ;
     skos:altLabel "FAIR Metrics Gen2- Unique Identifier (F1)"@en ;
@@ -585,10 +483,6 @@ fair:FES-MetadataIncludesLicenseWeakMetric a dqv:Metric ;
     dqv:expectedDataType xsd:float .
 
 
-
-# ==============================
-# FAIRChecker metrics (unchanged)
-# ==============================
 
 fair:FC-UniqueIDs-F1A a dqv:Metric ;
     skos:prefLabel "Unique IDs"@en ;
