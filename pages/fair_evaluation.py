@@ -48,9 +48,33 @@ if development_mode and not data_dois:
     data_dois = ["10.1000/xyz123"]
 
 # Checkboxes to include FES and FUJI evaluations
-include_fes = st.checkbox("Include FES Evaluation", value=True)
-include_fuji = st.checkbox("Include F-UJI Evaluation", value=True)
-include_fc = st.checkbox("Include FC Evaluation", value=True)
+include_fes = st.checkbox(
+    "FAIR Evaluation Services (FES)",
+    value=True,
+    help=(
+        "FES is the Wilkinson FAIR Maturity Evaluation Service. It runs a set of "
+        "automated 'Maturity Indicator' tests against a dataset's metadata to "
+        "check compliance with the FAIR principles."
+    ),
+)
+include_fuji = st.checkbox(
+    "F-UJI Automated FAIR Data Assessment Tool",
+    value=True,
+    help=(
+        "F-UJI ('UJI' means 'test' in Malay) is a web service that programmatically "
+        "assesses the FAIRness of a dataset based on the FAIRsFAIR Data Object "
+        "Assessment Metrics."
+    ),
+)
+include_fc = st.checkbox(
+    "FAIR Checker (FC)",
+    value=True,
+    help=(
+        "FAIR Checker inspects a dataset's metadata for FAIR-relevant signals "
+        "(identifiers, licenses, vocabularies, provenance, etc.) and reports a "
+        "score per FAIR principle."
+    ),
+)
 
 # Initialize session state for RDF representation and visualization toggle
 if "dqv_representation" not in st.session_state:

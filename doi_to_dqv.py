@@ -82,6 +82,7 @@ def create_dqv_representation(doi: str, fes_evaluation_result: list, fuji_evalua
     g.add((distribution_uri, DCTERMS.title, Literal("DOI distribution of dataset")))
     g.add((distribution_uri, DCAT.accessURL, URIRef(f"https://doi.org/{doi_url}")))
     g.add((distribution_uri, DCTERMS["format"], Literal(dataset_info["resource_type"])))
+    g.add((distribution_uri, DQV.hasQualityMetadata, quality_metadata_uri))
 
     if "byteSize" in dataset_info:
         g.add((distribution_uri, DCAT.byteSize, Literal(dataset_info["byteSize"], datatype=XSD.decimal)))
