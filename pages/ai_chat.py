@@ -485,9 +485,10 @@ with st.sidebar:
     if backend == "Ollama (local)":
         st.markdown("**Ollama connection**")
         if OLLAMA_HOST:
-            # Configured via .env — show read-only info, no input needed
             ollama_ip = OLLAMA_HOST
             ollama_port = OLLAMA_PORT
+            st.session_state["ollama_ip"] = ollama_ip
+            st.session_state["ollama_port"] = ollama_port
             st.caption(f"🖥️ `{ollama_ip}:{ollama_port}` (from .env)")
         else:
             ollama_ip = st.text_input(
