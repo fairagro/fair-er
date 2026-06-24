@@ -23,6 +23,7 @@ endpoints = {
     "openagrar": f"{fuseki_base_url}/openagrar/sparql",
     "nsfi": f"{fuseki_base_url}/nsfi/sparql",
     "publisso": f"{fuseki_base_url}/publisso/sparql",
+    "demo": f"{fuseki_base_url}/demo/sparql",
 }
 
 # Streamlit UI components
