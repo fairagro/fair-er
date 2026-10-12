@@ -148,16 +148,16 @@ fuji_metric_mapping_v08 = {
 }
 
 fc_metric_mapping = {
-"https://fair-checker.france-bioinformatique.fr/data/F1A": FAIRAGRO["FC-UniqueIDs-F1A"],
-"https://fair-checker.france-bioinformatique.fr/data/F1B": FAIRAGRO["FC-PersistentIDs-F1B"],
-"https://fair-checker.france-bioinformatique.fr/data/F2A": FAIRAGRO["FC-StructuredMetadata-F2A"],
-"https://fair-checker.france-bioinformatique.fr/data/F2B": FAIRAGRO["FC-SharedVocabulariesForMetadata-F2B"],
-"https://fair-checker.france-bioinformatique.fr/data/A1.1": FAIRAGRO["FC-OpenResolutionProtocol-A1.1"],
-"https://fair-checker.france-bioinformatique.fr/data/A1.2": FAIRAGRO["FC-AuthorisationProcedureOrAccessRights-A1.2"],
-"https://fair-checker.france-bioinformatique.fr/data/I1": FAIRAGRO["FC-MachineReadableFormat-I1"],
-"https://fair-checker.france-bioinformatique.fr/data/I2": FAIRAGRO["FC-UseSharedOntologies-I2"],
-"https://fair-checker.france-bioinformatique.fr/data/I3": FAIRAGRO["FC-ExternalLinks-I3"],
-"https://fair-checker.france-bioinformatique.fr/data/R1.1": FAIRAGRO["FC-MetadataIncludesLicense-R1.1"],
-"https://fair-checker.france-bioinformatique.fr/data/R1.2": FAIRAGRO["FC-MetadataIncludesProvenance-R1.2"],
-"https://fair-checker.france-bioinformatique.fr/data/R1.3": FAIRAGRO["FC-CommunityStandards-R1.3"],
+    "F1A": FAIRAGRO["FC-UniqueIDs-F1A"],
+    "F1B": FAIRAGRO["FC-PersistentIDs-F1B"],
+    "F2A": FAIRAGRO["FC-StructuredMetadata-F2A"],
+    "F2B": FAIRAGRO["FC-SharedVocabulariesForMetadata-F2B"],
+    "A11": FAIRAGRO["FC-OpenResolutionProtocol-A1.1"],
+    "A12": FAIRAGRO["FC-AuthorisationProcedureOrAccessRights-A1.2"],
+    "I1":  FAIRAGRO["FC-MachineReadableFormat-I1"],
+    "I2":  FAIRAGRO["FC-UseSharedOntologies-I2"],
+    "I3":  FAIRAGRO["FC-ExternalLinks-I3"],
+    "R11": FAIRAGRO["FC-MetadataIncludesLicense-R1.1"],
+    "R12": FAIRAGRO["FC-MetadataIncludesProvenance-R1.2"],
+    "R13": FAIRAGRO["FC-CommunityStandards-R1.3"],
 }

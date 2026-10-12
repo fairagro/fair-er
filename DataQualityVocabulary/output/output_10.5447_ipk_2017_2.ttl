@@ -1,0 +1,239 @@
+@prefix dcat: <http://www.w3.org/ns/dcat#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix dqv: <http://www.w3.org/ns/dqv#> .
+@prefix fairagro: <https://fairagro.net/ontology#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+fairagro:dataset-10.5447%2Fipk%2F2017%2F2 a dcat:Dataset ;
+    dcterms:title "Metabolite profiling of red and blue potatoes revealed cultivar and tissue specific patterns for anthocyanins and other polyphenols (supplemental data files)" ;
+    dcat:distribution fairagro:distribution-10.5447%2Fipk%2F2017%2F2 .
+
+fairagro:fc_measurement-10__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIRChecker ;
+    dqv:isMeasurementOf fairagro:FC-UseSharedOntologies-I2 ;
+    dqv:value "0.5"^^xsd:float .
+
+fairagro:fc_measurement-11__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIRChecker ;
+    dqv:isMeasurementOf fairagro:FC-SharedVocabulariesForMetadata-F2B ;
+    dqv:value "0.5"^^xsd:float .
+
+fairagro:fc_measurement-12__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIRChecker ;
+    dqv:isMeasurementOf fairagro:FC-AuthorisationProcedureOrAccessRights-A1.2 ;
+    dqv:value "0.0"^^xsd:float .
+
+fairagro:fc_measurement-1__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIRChecker ;
+    dqv:isMeasurementOf fairagro:FC-UniqueIDs-F1A ;
+    dqv:value "0.0"^^xsd:float .
+
+fairagro:fc_measurement-2__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIRChecker ;
+    dqv:isMeasurementOf fairagro:FC-OpenResolutionProtocol-A1.1 ;
+    dqv:value "1.0"^^xsd:float .
+
+fairagro:fc_measurement-3__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIRChecker ;
+    dqv:isMeasurementOf fairagro:FC-ExternalLinks-I3 ;
+    dqv:value "0.0"^^xsd:float .
+
+fairagro:fc_measurement-4__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIRChecker ;
+    dqv:isMeasurementOf fairagro:FC-MetadataIncludesProvenance-R1.2 ;
+    dqv:value "1.0"^^xsd:float .
+
+fairagro:fc_measurement-5__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIRChecker ;
+    dqv:isMeasurementOf fairagro:FC-MachineReadableFormat-I1 ;
+    dqv:value "0.5"^^xsd:float .
+
+fairagro:fc_measurement-6__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIRChecker ;
+    dqv:isMeasurementOf fairagro:FC-CommunityStandards-R1.3 ;
+    dqv:value "0.5"^^xsd:float .
+
+fairagro:fc_measurement-7__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIRChecker ;
+    dqv:isMeasurementOf fairagro:FC-MetadataIncludesLicense-R1.1 ;
+    dqv:value "0.0"^^xsd:float .
+
+fairagro:fc_measurement-8__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIRChecker ;
+    dqv:isMeasurementOf fairagro:FC-StructuredMetadata-F2A ;
+    dqv:value "0.5"^^xsd:float .
+
+fairagro:fc_measurement-9__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIRChecker ;
+    dqv:isMeasurementOf fairagro:FC-PersistentIDs-F1B ;
+    dqv:value "1.0"^^xsd:float .
+
+fairagro:fes_measurement-10__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-OpenFreeProtocolMetadataRetrievalMetric ;
+    dqv:value "1.0"^^xsd:float .
+
+fairagro:fes_measurement-11__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-DataAuthenticationAuthorizationMetric ;
+    dqv:value "0.0"^^xsd:float .
+
+fairagro:fes_measurement-12__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-MetadataAuthenticationAuthorizationMetric ;
+    dqv:value "1.0"^^xsd:float .
+
+fairagro:fes_measurement-13__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-MetadataPersistenceMetric ;
+    dqv:value "0.0"^^xsd:float .
+
+fairagro:fes_measurement-14__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-MetadataKnowledgeRepresentationLanguageWeakMetric ;
+    dqv:value "1.0"^^xsd:float .
+
+fairagro:fes_measurement-15__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-MetadataKnowledgeRepresentationLanguageStrongMetric ;
+    dqv:value "1.0"^^xsd:float .
+
+fairagro:fes_measurement-16__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-DataKnowledgeRepresentationLanguageWeakMetric ;
+    dqv:value "0.0"^^xsd:float .
+
+fairagro:fes_measurement-17__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-DataKnowledgeRepresentationLanguageStrongMetric ;
+    dqv:value "0.0"^^xsd:float .
+
+fairagro:fes_measurement-18__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-MetadataUsesFAIRVocabulariesWeakMetric ;
+    dqv:value "1.0"^^xsd:float .
+
+fairagro:fes_measurement-19__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-MetadataUsesFAIRVocabulariesStrongMetric ;
+    dqv:value "0.0"^^xsd:float .
+
+fairagro:fes_measurement-1__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-UniqueIdentifierMetric ;
+    dqv:value "1.0"^^xsd:float .
+
+fairagro:fes_measurement-20__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-MetadataContainsQualifiedOutwardReferencesMetric ;
+    dqv:value "1.0"^^xsd:float .
+
+fairagro:fes_measurement-21__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-MetadataIncludesLicenseStrongMetric ;
+    dqv:value "0.0"^^xsd:float .
+
+fairagro:fes_measurement-22__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-MetadataIncludesLicenseWeakMetric ;
+    dqv:value "0.0"^^xsd:float .
+
+fairagro:fes_measurement-2__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-IdentifierPersistenceMetric ;
+    dqv:value "1.0"^^xsd:float .
+
+fairagro:fes_measurement-3__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-DataIdentifierPersistenceMetric ;
+    dqv:value "0.0"^^xsd:float .
+
+fairagro:fes_measurement-4__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-StructuredMetadataMetric ;
+    dqv:value "1.0"^^xsd:float .
+
+fairagro:fes_measurement-5__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-GroundedMetadataMetric ;
+    dqv:value "1.0"^^xsd:float .
+
+fairagro:fes_measurement-6__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-DataIdentifierExplicitlyInMetadataMetric ;
+    dqv:value "0.0"^^xsd:float .
+
+fairagro:fes_measurement-7__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-MetadataIdentifierExplicitlyInMetadataMetric ;
+    dqv:value "0.0"^^xsd:float .
+
+fairagro:fes_measurement-8__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-SearchableInMajorSearchEngineMetric ;
+    dqv:value "0.0"^^xsd:float .
+
+fairagro:fes_measurement-9__10.5447%2Fipk%2F2017%2F2 a dqv:QualityMeasurement ;
+    dqv:computedBy fairagro:FAIREvaluationServices ;
+    dqv:isMeasurementOf fairagro:FES-OpenFreeProtocolDataRetrievalMetric ;
+    dqv:value "0.0"^^xsd:float .
+
+fairagro:qualityChecking-10.5447%2Fipk%2F2017%2F2 a prov:Activity ;
+    rdfs:label "The checking of the dataset distribution's quality"^^xsd:string ;
+    prov:endedAtTime "2026-10-12T12:20:10.067508"^^xsd:dateTime ;
+    prov:generated fairagro:qualityMetadata-10.5447%2Fipk%2F2017%2F2 ;
+    prov:startedAtTime "2026-10-12T12:19:40.592351"^^xsd:dateTime ;
+    prov:used fairagro:distribution-10.5447%2Fipk%2F2017%2F2 ;
+    prov:wasAssociatedWith fairagro:FAIRChecker,
+        fairagro:FAIREvaluationServices,
+        fairagro:FUJIAutomatedFAIRDataAssessmentTool .
+
+fairagro:distribution-10.5447%2Fipk%2F2017%2F2 a dcat:Distribution ;
+    dcterms:format "Image" ;
+    dcterms:title "DOI distribution of dataset" ;
+    dcat:accessURL <https://doi.org/10.5447/ipk/2017/2> ;
+    dqv:hasQualityMeasurement fairagro:fc_measurement-10__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fc_measurement-11__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fc_measurement-12__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fc_measurement-1__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fc_measurement-2__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fc_measurement-3__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fc_measurement-4__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fc_measurement-5__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fc_measurement-6__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fc_measurement-7__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fc_measurement-8__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fc_measurement-9__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-10__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-11__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-12__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-13__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-14__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-15__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-16__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-17__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-18__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-19__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-1__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-20__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-21__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-22__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-2__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-3__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-4__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-5__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-6__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-7__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-8__10.5447%2Fipk%2F2017%2F2,
+        fairagro:fes_measurement-9__10.5447%2Fipk%2F2017%2F2 ;
+    dqv:hasQualityMetadata fairagro:qualityMetadata-10.5447%2Fipk%2F2017%2F2 .
+
+fairagro:qualityMetadata-10.5447%2Fipk%2F2017%2F2 a dqv:QualityMetadata ;
+    prov:generatedAtTime "2026-10-12T12:20:10.247776"^^xsd:dateTime ;
+    prov:wasAttributedTo fairagro:FAIRChecker,
+        fairagro:FAIREvaluationServices,
+        fairagro:FUJIAutomatedFAIRDataAssessmentTool ;
+    prov:wasGeneratedBy fairagro:qualityChecking-10.5447%2Fipk%2F2017%2F2 .
+

@@ -1,3 +1,5 @@
+import os
+
 from rdflib import Graph, Literal, Namespace, URIRef
 from rdflib.namespace import DCAT, DCTERMS, RDF, XSD, PROV, RDFS
 from urllib.parse import quote
@@ -171,6 +173,7 @@ def create_dqv_representation(doi: str, fes_evaluation_result: list, fuji_evalua
     for sub_metric, score in fuji_evaluation_result.items():
         metric_uri = fuji_metric_mapping.get(sub_metric)
         if not metric_uri:
+            print(f"WARNING: unmapped FUJI metric {sub_metric}")
             continue
         measurement_uri = FAIRAGRO[f"fuji_measurement-{metric_index + 1}__{doi_slug}"]
         metric_index += 1
@@ -194,9 +197,10 @@ def create_dqv_representation(doi: str, fes_evaluation_result: list, fuji_evalua
     measurements = []
     metric_index = 0
     for sub_metric, score in fc_evaluation_result.items():
-        metric_uri = fc_metric_mapping.get(sub_metric)
-        print(metric_uri)
+        key = sub_metric.rstrip("/").rsplit("/", 1)[-1].replace(".", "")
+        metric_uri = fc_metric_mapping.get(key)
         if not metric_uri:
+            print(f"WARNING: unmapped FC metric {sub_metric}")
             continue
         measurement_uri = FAIRAGRO[f"fc_measurement-{metric_index + 1}__{doi_slug}"]
         metric_index += 1
@@ -220,6 +224,8 @@ def create_dqv_representation(doi: str, fes_evaluation_result: list, fuji_evalua
 
 
 if __name__ == "__main__":
+    from FC_evaluation import fairchecker_evaluate_to_list
+
     # Fixed DOI for testing
     # doi = "10.20387/bonares-tdgx-339v"
     doi = "10.5447/ipk/2017/2"
@@ -227,15 +233,22 @@ if __name__ == "__main__":
     # Define the start time before the evaluation
     start_time = datetime.now()
 
-    # Get the evaluation result from FES
-    fes_evaluation_result = fes_evaluate_to_list(doi)
+    # Get the evaluation result from FES (returns a tuple: (scores, error_message))
+    fes_evaluation_result, fes_error = fes_evaluate_to_list(doi)
     # fes_evaluation_result = ['1', '1', '0', '1', '1', '0', '0', '0', '0', '1', '0', '1', '0', '1', '1', '0', '0', '1',
     #                          '0', '1', '0', '1']
+    if fes_error:
+        print("FES evaluation failed:", fes_error)
+    fes_evaluation_result = fes_evaluation_result or []
     if fes_evaluation_result:
         print("FES Evaluation Result:", fes_evaluation_result)
 
-    # Get the evaluation result from FUJI
-    fuji_evaluation_result = fuji_evaluate_to_list(doi)
+    # Get the evaluation result from FUJI (raises RuntimeError on failure)
+    try:
+        fuji_evaluation_result = fuji_evaluate_to_list(doi)
+    except RuntimeError as e:
+        print("FUJI evaluation failed:", e)
+        fuji_evaluation_result = {}
     # fuji_evaluation_result = {
     #     "FsF-F1-01D-1": 0.8, "FsF-F1-01D-2": 0.6, "FsF-F1-02D-1": 1.0, "FsF-F1-02D-2": 0.9,
     #     "FsF-F2-01M-1": 1.0, "FsF-F2-01M-2": 0.8, "FsF-F2-01M-3": 0.9, "FsF-F3-01M-1": 0.7,
@@ -252,17 +265,35 @@ if __name__ == "__main__":
     if fuji_evaluation_result:
         print("FUJI Evaluation Result:", fuji_evaluation_result)
 
+    # Get the evaluation result from FAIR-Checker (raises RuntimeError on failure)
+    try:
+        fc_evaluation_result = fairchecker_evaluate_to_list(doi)
+    except RuntimeError as e:
+        print("FC evaluation failed:", e)
+        fc_evaluation_result = {}
+    if fc_evaluation_result:
+        print("FC Evaluation Result:", fc_evaluation_result)
+
     # Define the end time after the evaluation
     end_time = datetime.now()
 
     # Create DQV representation
-    graph = create_dqv_representation(doi, fes_evaluation_result, fuji_evaluation_result, start_time, end_time)
+    graph = create_dqv_representation(
+        doi,
+        fes_evaluation_result,
+        fuji_evaluation_result,
+        fc_evaluation_result,
+        start_time,
+        end_time,
+    )
     if graph:
-        output_file = f"DataQualityVocabulary/output/output_{doi.replace('/', '_')}.ttl"
+        output_dir = "DataQualityVocabulary/output"
+        os.makedirs(output_dir, exist_ok=True)
+        output_file = f"{output_dir}/output_{doi.replace('/', '_')}.ttl"
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write(graph.serialize(format='turtle'))
         print(f"Output written to {output_file}")
-        output_file = f"DataQualityVocabulary/output/output_{doi.replace('/', '_')}.jsonld"
+        output_file = f"{output_dir}/output_{doi.replace('/', '_')}.jsonld"
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write(graph.serialize(format='json-ld'))
         print(f"Output written to {output_file}")
