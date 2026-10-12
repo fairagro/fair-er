@@ -46,7 +46,7 @@ def fairchecker_evaluate_to_list(data_doi: str) -> Dict[str, float]:
             checker_url,
             params=params,
             headers={"accept": "application/json"},
-            timeout=45
+            timeout=30
         )
         response.raise_for_status()
     except ConnectTimeout:

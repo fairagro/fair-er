@@ -78,7 +78,7 @@ def fes_evaluate_to_list(data_doi: str | None = None) -> tuple[list[str] | None,
     print(f"Running FES evaluation for {data}")
 
     try:
-        response = requests.post(url, json=data, headers=headers, verify=True, timeout=500)
+        response = requests.post(url, json=data, headers=headers, verify=True, timeout=30)
     except ConnectTimeout as e1:
         return None, f"FES evaluation timed out. Original error: {e1}"
         #try:
