@@ -4,13 +4,23 @@ import requests
 import csv
 import json
 from dotenv import load_dotenv
-from requests.exceptions import ConnectTimeout, RequestException
+from requests.exceptions import ConnectionError as RequestsConnectionError, RequestException
 
 # Load dotenv
 load_dotenv()
 
 # This is the Wilkinson FAIR Evaluation Service
 url = os.getenv("FES_URL", "https://fairdata.services:7171/FAIR_Evaluator/collections/6/evaluate")
+# Alternative endpoint on the standard HTTPS port (used as fallback if the primary one is unreachable)
+url_alternative = os.getenv("FES_URL_ALTERNATIVE", "https://w3id.org/FAIR_Evaluator/collections/6/evaluate")
+
+# (connect timeout, read timeout) in seconds; override via .env, e.g. FES_READ_TIMEOUT=60 for quick tests
+FES_CONNECT_TIMEOUT = float(os.getenv("FES_CONNECT_TIMEOUT", "10"))
+FES_READ_TIMEOUT = float(os.getenv("FES_READ_TIMEOUT", "120"))
+FES_TIMEOUT = (FES_CONNECT_TIMEOUT, FES_READ_TIMEOUT)
+
+NUM_FES_METRICS = 22
+
 headers = {
     'accept': '*/*',
     'Content-Type': 'application/json'
@@ -78,13 +88,16 @@ def fes_evaluate_to_list(data_doi: str | None = None) -> tuple[list[str] | None,
     print(f"Running FES evaluation for {data}")
 
     try:
-        response = requests.post(url, json=data, headers=headers, verify=True, timeout=30)
-    except ConnectTimeout as e1:
-        return None, f"FES evaluation timed out. Original error: {e1}"
-        #try:
-        #    response = requests.post(url, json=data, headers=headers, verify=False, timeout=120)
-        #except ConnectTimeout as e2:
-        #    return None, f"FES evaluation timed out (even with SSL verification disabled). Original error: {e1}"
+        response = requests.post(url, json=data, headers=headers, verify=True, timeout=FES_TIMEOUT)
+    except RequestsConnectionError as e1:
+        # Covers ConnectTimeout as well: the primary endpoint cannot be reached at all
+        # (e.g. outbound port 7171 blocked by a firewall) -> try the alternative endpoint
+        print(f"Primary FES endpoint unreachable ({type(e1).__name__}); trying alternative endpoint.")
+        scores, alt_error = fes_evaluate_to_list_alternative(data_doi)
+        if scores is not None:
+            return scores, None
+        return None, (f"FES primary endpoint unreachable ({type(e1).__name__}: {e1}); "
+                      f"alternative endpoint failed as well: {alt_error}")
     except RequestException as e:
         return None, f"FES evaluation failed: {e}"
 
@@ -99,9 +112,7 @@ def fes_evaluate_to_list(data_doi: str | None = None) -> tuple[list[str] | None,
 
 
 def fes_evaluate_to_list_alternative(data_doi: str | None = None) -> tuple[list[str] | None, str | None]:
-    # Base configuration
-    url_alt = "https://w3id.org/FAIR_Evaluator/collections/6/evaluate"
-    headers = {"Content-Type": "application/json", "Accept": "application/json"}
+    alt_headers = {"Content-Type": "application/json", "Accept": "application/json"}
     base_payload = {
         "executor": "FAIRagro Tool Dev",
         "title": "FAIRagro FAIR Assessment Tool Development",
@@ -116,14 +127,9 @@ def fes_evaluate_to_list_alternative(data_doi: str | None = None) -> tuple[list[
     print(f"Running FES evaluation Alternative for {payload}")
 
     try:
-        # First attempt with SSL verification
-        try:
-            response = requests.post(url_alt, json=payload, headers=headers, verify=True, timeout=120)
-        except requests.exceptions.ConnectTimeout:
-            # Second attempt without SSL verification
-            response = requests.post(url_alt, json=payload, headers=headers, verify=False, timeout=120)
-    except requests.exceptions.RequestException as e:
-        return None, f"FES evaluation failed: {e}"
+        response = requests.post(url_alternative, json=payload, headers=alt_headers, verify=True, timeout=FES_TIMEOUT)
+    except RequestException as e:
+        return None, f"FES alternative evaluation failed: {e}"
 
     if response.status_code == 200:
         print("Request successful!")
@@ -132,20 +138,26 @@ def fes_evaluate_to_list_alternative(data_doi: str | None = None) -> tuple[list[
             response_data = response.json()
             eval_result = json.loads(response_data["evaluationResult"])
 
-            # Extract scores for metrics 1-22
+            # Extract scores for metrics 1-22 (the order must match fes_metric_mapping in metric_mappings.py)
             scores = []
-            for metric_num in range(1, 23):
+            missing = []
+            for metric_num in range(1, NUM_FES_METRICS + 1):
                 metric_key = f"http://fairdata.services:3333/FAIR_Evaluator/metrics/{metric_num}"
-                metric_entry = eval_result.get(metric_key, [{}])
+                metric_entry = eval_result.get(metric_key)
+                if not metric_entry:
+                    missing.append(metric_num)
+                    continue
 
-                # Extract score value (default to "0")
                 score_entries = metric_entry[0].get("http://semanticscience.org/resource/SIO_000300", [{}])
-                score_value = score_entries[0].get("@value", "0") if score_entries else "0"
-                scores.append(score_value)
+                scores.append(str(score_entries[0].get("@value", "0")) if score_entries else "0")
 
-            print(f"fes_evaluate_to_list_result: {scores}")
+            if missing:
+                # Do not silently fill gaps with zeros: that would distort the scores
+                return None, f"Alternative response is missing metrics {missing}"
+
+            print(f"fes_evaluate_to_list_result (alternative): {scores}")
             return scores, None
-        except (KeyError, json.JSONDecodeError) as e:
+        except (KeyError, IndexError, TypeError, json.JSONDecodeError) as e:
             return None, f"Response parsing failed: {e}"
 
     return None, f"Request failed with status code {response.status_code}"
