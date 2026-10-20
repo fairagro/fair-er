@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import altair as alt
+import plotly.graph_objects as go
 
 st.title("FAIR Scores by RDI (samples)")
 
@@ -95,12 +95,23 @@ df = pd.DataFrame({
 st.subheader(f"{dataset_name} - Scores Table")
 st.table(df)
 
-# Show chart
+# Show chart (Plotly instead of Altair)
 st.subheader(f"{dataset_name} - Scores Chart")
-chart = alt.Chart(df).mark_bar().encode(
-    x=alt.X("Dimension", sort=None),
-    y=alt.Y("Score", scale=alt.Scale(domain=[0, 1])),
-    color=alt.Color("Dimension", legend=None)
-).properties(width=600, height=400)
-
-st.altair_chart(chart)
+bar_colors = ["#4c78a8", "#f58518", "#e45756", "#72b7b2", "#54a24b", "#b279a2"]
+fig = go.Figure(
+    go.Bar(
+        x=df["Dimension"],
+        y=df["Score"],
+        marker={"color": bar_colors[: len(df)]},
+        text=[f"{s:.2f}" for s in df["Score"]],
+        textposition="outside",
+    )
+)
+fig.update_layout(
+    xaxis_title="Dimension",
+    yaxis_title="Score",
+    yaxis={"range": [0, 1]},
+    showlegend=False,
+    height=400,
+)
+st.plotly_chart(fig, use_container_width=True)

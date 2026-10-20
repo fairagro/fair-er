@@ -1,7 +1,19 @@
 import os
+import re
+import hmac
 import json
 import requests
 import streamlit as st
+
+def _env_int(name: str, default: int) -> int:
+    """Read an int from the environment; empty or invalid values fall back to the default."""
+    raw = (os.environ.get(name) or "").strip()
+    try:
+        return int(raw) if raw else default
+    except ValueError:
+        print(f"[ai_chat] Invalid value for {name}: using default {default}")
+        return default
+
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 OPENROUTER_API_KEY = os.environ.get("OR_API_KEY", "")
@@ -9,11 +21,25 @@ OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_MODEL = "openrouter/free"
 
 FUSEKI_URL = os.environ.get("FUSEKI_URL", "http://fuseki:3030")
-FUSEKI_USER = os.environ.get("FUSEKI_USER", "admin")
-FUSEKI_PASSWORD = os.environ.get("FUSEKI_PASSWORD", "")
+# Prefer a READ-ONLY Fuseki user for the chat; falls back to the admin credentials.
+FUSEKI_USER = os.environ.get("FUSEKI_CHAT_USER") or os.environ.get("FUSEKI_USER", "admin")
+FUSEKI_PASSWORD = os.environ.get("FUSEKI_CHAT_PASSWORD") or os.environ.get("FUSEKI_PASSWORD", "")
 
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "")
-OLLAMA_PORT = int(os.environ.get("OLLAMA_PORT", 11434))
+OLLAMA_PORT = _env_int("OLLAMA_PORT", 11434)
+# Optional: comma-separated allowlist of models visitors may choose, e.g. "llama3.1:8b,qwen2.5:14b"
+OLLAMA_ALLOWED_MODELS = {
+    m.strip() for m in os.environ.get("OLLAMA_ALLOWED_MODELS", "").split(",") if m.strip()
+}
+
+# Optional shared password for this page. If unset, the page is open.
+CHAT_PASSWORD = os.environ.get("CHAT_PASSWORD", "")
+# Per-session limits (best effort; a browser refresh starts a new session)
+MAX_USER_MESSAGES = _env_int("CHAT_MAX_MESSAGES", 30)
+MAX_HISTORY = 20  # number of chat messages sent to the LLM
+
+# Datasets the LLM / sidebar may touch
+ALLOWED_DATASETS = {"FAIR_Metrics", "bonares", "openagrar", "e!dal", "nsfi", "publisso", "demo"}
 
 # Models known to support tool calling in Ollama
 OLLAMA_TOOL_CAPABLE_MODELS = {
@@ -26,9 +52,29 @@ OLLAMA_TOOL_CAPABLE_MODELS = {
     "nemotron-mini",
 }
 
+# ── SPARQL safety ──────────────────────────────────────────────────────────────
+# Best-effort filter. The real protection is a read-only Fuseki user (see above).
+FORBIDDEN_SPARQL = re.compile(
+    r"\b(SERVICE|INSERT|DELETE|LOAD|CLEAR|DROP|CREATE|COPY|MOVE|ADD|WITH|USING)\b", re.IGNORECASE
+)
+_COMMENT_LINE = re.compile(r"^\s*#.*$", re.MULTILINE)
+_PREFIX_LINE = re.compile(r"^\s*(PREFIX\s+\S*\s*<[^>]*>|BASE\s+<[^>]*>)\s*", re.IGNORECASE | re.MULTILINE)
+
+
+def is_safe_sparql(query: str) -> bool:
+    stripped = _PREFIX_LINE.sub("", _COMMENT_LINE.sub("", query)).strip()
+    if not re.match(r"(SELECT|ASK)\b", stripped, re.IGNORECASE):
+        return False
+    return not FORBIDDEN_SPARQL.search(stripped)
+
+
 # ── SPARQL tool implementation ─────────────────────────────────────────────────
 def run_sparql(dataset: str, query: str) -> str:
-    """Execute a SPARQL SELECT query against a Fuseki dataset and return results as JSON string."""
+    """Execute a SPARQL SELECT/ASK query against an allowed Fuseki dataset."""
+    if dataset not in ALLOWED_DATASETS:
+        return f"Unknown dataset. Allowed datasets: {', '.join(sorted(ALLOWED_DATASETS))}"
+    if not is_safe_sparql(query):
+        return "Only plain SELECT or ASK queries are allowed (no SERVICE, updates, etc.)."
     try:
         response = requests.post(
             f"{FUSEKI_URL}/{dataset}/sparql",
@@ -37,9 +83,15 @@ def run_sparql(dataset: str, query: str) -> str:
             auth=(FUSEKI_USER, FUSEKI_PASSWORD),
             timeout=30,
         )
+        if response.status_code == 400:
+            # Syntax errors: useful for the LLM to correct its query
+            return f"SPARQL syntax error: {response.text[:300]}"
         if response.status_code != 200:
-            return f"SPARQL error HTTP {response.status_code}: {response.text[:500]}"
+            print(f"[ai_chat] SPARQL HTTP {response.status_code}: {response.text[:500]}")
+            return f"SPARQL query failed (HTTP {response.status_code})."
         results = response.json()
+        if "boolean" in results:  # ASK query
+            return f"Result: {results['boolean']}"
         bindings = results.get("results", {}).get("bindings", [])
         if not bindings:
             return "Query returned no results."
@@ -53,23 +105,30 @@ def run_sparql(dataset: str, query: str) -> str:
         lines.append(f"\nTotal rows returned: {len(bindings)}")
         return "\n".join(lines)
     except Exception as e:
-        return f"SPARQL execution error: {e}"
+        print(f"[ai_chat] SPARQL execution error: {e}")
+        return "SPARQL execution failed. The triplestore may be temporarily unavailable."
+
+
+@st.cache_data(ttl=60)
+def _fetch_fuseki_datasets() -> list[str]:
+    """Raises on failure so that failures are not cached."""
+    response = requests.get(
+        f"{FUSEKI_URL}/$/datasets",
+        auth=(FUSEKI_USER, FUSEKI_PASSWORD),
+        timeout=10,
+    )
+    response.raise_for_status()
+    names = [d["ds.name"].lstrip("/") for d in response.json().get("datasets", [])]
+    return sorted(n for n in names if n in ALLOWED_DATASETS)
 
 
 def list_fuseki_datasets() -> str:
-    """List all available datasets on the Fuseki server."""
+    """List the available (allowed) datasets on the Fuseki server."""
     try:
-        response = requests.get(
-            f"{FUSEKI_URL}/$/datasets",
-            auth=(FUSEKI_USER, FUSEKI_PASSWORD),
-            timeout=10,
-        )
-        if response.status_code != 200:
-            return f"Error listing datasets: HTTP {response.status_code}"
-        datasets = [d["ds.name"].lstrip("/") for d in response.json().get("datasets", [])]
-        return "Available datasets: " + ", ".join(datasets)
+        return "Available datasets: " + ", ".join(_fetch_fuseki_datasets())
     except Exception as e:
-        return f"Error: {e}"
+        print(f"[ai_chat] Error listing datasets: {e}")
+        return "Dataset list is currently unavailable."
 
 
 # ── Tool definitions (OpenAI-compatible tool calling format) ───────────────────
@@ -267,8 +326,10 @@ When answering questions:
 
 # ── Tool dispatch ──────────────────────────────────────────────────────────────
 def dispatch_tool(name: str, args: dict) -> str:
+    if not isinstance(args, dict):
+        return "Error: tool arguments must be a JSON object."
     if name == "sparql_query":
-        return run_sparql(args["dataset"], args["query"])
+        return run_sparql(str(args.get("dataset", "")), str(args.get("query", "")))
     elif name == "list_datasets":
         return list_fuseki_datasets()
     return f"Unknown tool: {name}"
@@ -279,19 +340,24 @@ def get_ollama_base_url(ip: str, port: int) -> str:
     return f"http://{ip}:{port}"
 
 
+@st.cache_data(ttl=60)
+def _fetch_ollama_models_cached(ip: str, port: int) -> list[str]:
+    """Raises on failure so that failures are not cached (cache lives server-side only)."""
+    resp = requests.get(f"{get_ollama_base_url(ip, port)}/api/tags", timeout=5)
+    resp.raise_for_status()
+    return [m["name"] for m in resp.json().get("models", [])]
+
+
 def fetch_ollama_models(ip: str, port: int) -> list[str]:
-    """Fetch available models from the remote Ollama instance."""
+    """Fetch available models from the Ollama instance, filtered by the optional allowlist."""
     try:
-        resp = requests.get(
-            f"{get_ollama_base_url(ip, port)}/api/tags",
-            timeout=5,
-        )
-        if resp.status_code != 200:
-            return []
-        data = resp.json()
-        return [m["name"] for m in data.get("models", [])]
-    except Exception:
+        models = _fetch_ollama_models_cached(ip, port)
+    except Exception as e:
+        print(f"[ai_chat] Could not fetch Ollama models: {e}")
         return []
+    if OLLAMA_ALLOWED_MODELS:
+        models = [m for m in models if m in OLLAMA_ALLOWED_MODELS]
+    return models
 
 
 def ollama_supports_tools(model_name: str) -> bool:
@@ -301,49 +367,95 @@ def ollama_supports_tools(model_name: str) -> bool:
 
 
 # ── LLM API call with tool loop ────────────────────────────────────────────────
-def call_llm(messages: list, backend: str, ollama_ip: str, ollama_port: int, ollama_model: str) -> tuple[str, list]:
+def call_llm(messages: list, backend: str, ollama_model: str) -> tuple[str, list]:
     """
     Send messages to the selected backend (OpenRouter or Ollama), handle tool calls in a loop.
     Returns (final_text, tool_calls_log).
     """
     if backend == "OpenRouter":
         return _call_openrouter(messages)
-    else:
-        return _call_ollama(messages, ollama_ip, ollama_port, ollama_model)
+    return _call_ollama(messages, ollama_model)
+
+
+def _parse_tool_args(tool_call: dict, working_messages: list, tool_log: list):
+    """Parse tool call arguments. Returns dict or None (after logging the error to the LLM)."""
+    fn_name = tool_call["function"]["name"]
+    raw = tool_call["function"].get("arguments") or "{}"
+    try:
+        args = json.loads(raw)
+        if not isinstance(args, dict):
+            raise ValueError("arguments must be a JSON object")
+        return args
+    except (json.JSONDecodeError, ValueError) as e:
+        working_messages.append({
+            "role": "tool",
+            "tool_call_id": tool_call["id"],
+            "content": f"Error: malformed tool call arguments ({e}). Raw: {str(raw)[:300]}"
+        })
+        tool_log.append({"tool": fn_name, "args": {"error": f"malformed JSON: {str(raw)[:200]}"},
+                         "result_preview": "JSON parse error"})
+        return None
+
+
+def _run_tool_calls(message: dict, working_messages: list, tool_log: list) -> None:
+    for tool_call in message["tool_calls"]:
+        fn_name = tool_call["function"]["name"]
+        fn_args = _parse_tool_args(tool_call, working_messages, tool_log)
+        if fn_args is None:
+            continue
+        tool_log.append({"tool": fn_name, "args": fn_args})
+        result = dispatch_tool(fn_name, fn_args)
+        tool_log[-1]["result_preview"] = result[:300]
+        working_messages.append({
+            "role": "tool",
+            "tool_call_id": tool_call["id"],
+            "content": result,
+        })
 
 
 def _call_openrouter(messages: list) -> tuple[str, list]:
     if not OPENROUTER_API_KEY:
-        return "⚠️ OR_API_KEY environment variable is not set.", []
+        return "⚠️ The OpenRouter backend is not configured on this server.", []
 
     tool_log = []
     working_messages = messages.copy()
 
     for _ in range(10):
-        response = requests.post(
-            OPENROUTER_URL,
-            headers={
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json={
-                "model": OPENROUTER_MODEL,
-                "messages": working_messages,
-                "tools": TOOLS,
-                "tool_choice": "auto",
-                "max_tokens": 4096,
-            },
-            timeout=60,
-        )
+        try:
+            response = requests.post(
+                OPENROUTER_URL,
+                headers={
+                    "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": OPENROUTER_MODEL,
+                    "messages": working_messages,
+                    "tools": TOOLS,
+                    "tool_choice": "auto",
+                    "max_tokens": 4096,
+                },
+                timeout=60,
+            )
+        except requests.exceptions.Timeout:
+            return "⚠️ The request to the LLM service timed out. Please try again.", tool_log
+        except requests.exceptions.RequestException as e:
+            print(f"[ai_chat] OpenRouter request failed: {e}")
+            return "⚠️ Could not reach the LLM service. Please try again later.", tool_log
 
         if response.status_code != 200:
-            return f"API error HTTP {response.status_code}: {response.text[:500]}", tool_log
+            print(f"[ai_chat] OpenRouter HTTP {response.status_code}: {response.text[:500]}")
+            return f"⚠️ The LLM service returned an error (HTTP {response.status_code}).", tool_log
 
-        data = response.json()
+        try:
+            data = response.json()
+        except ValueError:
+            print(f"[ai_chat] OpenRouter returned non-JSON: {response.text[:300]}")
+            return "⚠️ The LLM service returned an invalid response.", tool_log
 
         if "choices" not in data or not data["choices"]:
-            error_msg = data.get("error", {}).get("message", str(data))
-            return f"API error: {error_msg}", tool_log
+            print(f"[ai_chat] OpenRouter unexpected response: {str(data)[:500]}")
+            return "⚠️ The LLM service returned an unexpected response.", tool_log
 
         choice = data["choices"][0]
         message = choice["message"]
@@ -354,42 +466,24 @@ def _call_openrouter(messages: list) -> tuple[str, list]:
         if finish_reason == "stop" or not message.get("tool_calls"):
             return message.get("content") or "", tool_log
 
-        for tool_call in message["tool_calls"]:
-            fn_name = tool_call["function"]["name"]
-            try:
-                fn_args = json.loads(tool_call["function"]["arguments"])
-            except json.JSONDecodeError as e:
-                raw = tool_call["function"]["arguments"]
-                working_messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call["id"],
-                    "content": f"Error: malformed tool call arguments (JSON parse error: {e}). Raw: {raw[:300]}"
-                })
-                tool_log.append({"tool": fn_name, "args": {"error": f"malformed JSON: {raw[:200]}"}, "result_preview": "JSON parse error"})
-                continue
-            tool_log.append({"tool": fn_name, "args": fn_args})
-            result = dispatch_tool(fn_name, fn_args)
-            tool_log[-1]["result_preview"] = result[:300]
-            working_messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call["id"],
-                "content": result,
-            })
+        _run_tool_calls(message, working_messages, tool_log)
 
     return "Maximum tool call rounds reached.", tool_log
 
 
-def _call_ollama(messages: list, ip: str, port: int, model: str) -> tuple[str, list]:
+def _call_ollama(messages: list, model: str) -> tuple[str, list]:
     """
-    Call a local Ollama instance using its OpenAI-compatible /v1/chat/completions endpoint.
-    Handles tool calling for supported models.
+    Call the configured Ollama instance using its OpenAI-compatible /v1/chat/completions endpoint.
+    Handles tool calling for supported models. The host never appears in any returned message.
     """
-    if not ip:
-        return "⚠️ No Ollama host configured. Set OLLAMA_HOST in your .env file.", []
+    if not OLLAMA_HOST:
+        return "⚠️ Local Ollama is not configured on this server.", []
     if not model:
         return "⚠️ No Ollama model selected.", []
-    base_url = get_ollama_base_url(ip, port)
-    url = f"{base_url}/v1/chat/completions"
+    if OLLAMA_ALLOWED_MODELS and model not in OLLAMA_ALLOWED_MODELS:
+        return "⚠️ This model is not allowed.", []
+
+    url = f"{get_ollama_base_url(OLLAMA_HOST, OLLAMA_PORT)}/v1/chat/completions"
     tool_log = []
     working_messages = messages.copy()
     use_tools = ollama_supports_tools(model)
@@ -411,18 +505,28 @@ def _call_ollama(messages: list, ip: str, port: int, model: str) -> tuple[str, l
                 json=payload,
                 timeout=120,  # local models can be slower
             )
-        except requests.exceptions.ConnectionError:
-            return f"⚠️ Could not connect to Ollama at {base_url}. Check IP, port, and VPN.", tool_log
         except requests.exceptions.Timeout:
-            return "⚠️ Request to Ollama timed out. The model may still be loading.", tool_log
+            return "⚠️ The request to the local model timed out. The model may still be loading.", tool_log
+        except requests.exceptions.ConnectionError as e:
+            print(f"[ai_chat] Ollama connection error: {e}")
+            return "⚠️ The local model is currently unavailable.", tool_log
+        except requests.exceptions.RequestException as e:
+            print(f"[ai_chat] Ollama request failed: {e}")
+            return "⚠️ The request to the local model failed.", tool_log
 
         if response.status_code != 200:
-            return f"Ollama error HTTP {response.status_code}: {response.text[:500]}", tool_log
+            print(f"[ai_chat] Ollama HTTP {response.status_code}: {response.text[:500]}")
+            return f"⚠️ The local model returned an error (HTTP {response.status_code}).", tool_log
 
-        data = response.json()
+        try:
+            data = response.json()
+        except ValueError:
+            print(f"[ai_chat] Ollama returned non-JSON: {response.text[:300]}")
+            return "⚠️ The local model returned an invalid response.", tool_log
 
         if "choices" not in data or not data["choices"]:
-            return f"Unexpected Ollama response: {str(data)[:300]}", tool_log
+            print(f"[ai_chat] Ollama unexpected response: {str(data)[:500]}")
+            return "⚠️ The local model returned an unexpected response.", tool_log
 
         choice = data["choices"][0]
         message = choice["message"]
@@ -433,33 +537,44 @@ def _call_ollama(messages: list, ip: str, port: int, model: str) -> tuple[str, l
         if not use_tools or finish_reason == "stop" or not message.get("tool_calls"):
             return message.get("content") or "", tool_log
 
-        for tool_call in message["tool_calls"]:
-            fn_name = tool_call["function"]["name"]
-            try:
-                fn_args = json.loads(tool_call["function"]["arguments"])
-            except json.JSONDecodeError as e:
-                raw = tool_call["function"]["arguments"]
-                working_messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call["id"],
-                    "content": f"Error: malformed tool call arguments (JSON parse error: {e}). Raw: {raw[:300]}"
-                })
-                tool_log.append({"tool": fn_name, "args": {"error": f"malformed JSON: {raw[:200]}"}, "result_preview": "JSON parse error"})
-                continue
-            tool_log.append({"tool": fn_name, "args": fn_args})
-            result = dispatch_tool(fn_name, fn_args)
-            tool_log[-1]["result_preview"] = result[:300]
-            working_messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call["id"],
-                "content": result,
-            })
+        _run_tool_calls(message, working_messages, tool_log)
 
     return "Maximum tool call rounds reached.", tool_log
 
 
+# ── UI helpers ─────────────────────────────────────────────────────────────────
+def require_password() -> None:
+    """Optional shared-password gate. Active only if CHAT_PASSWORD is set."""
+    if not CHAT_PASSWORD or st.session_state.get("chat_authed"):
+        return
+    st.info("This page is password protected.")
+    pw = st.text_input("Password", type="password")
+    if pw:
+        if hmac.compare_digest(pw.encode("utf-8"), CHAT_PASSWORD.encode("utf-8")):
+            st.session_state["chat_authed"] = True
+            st.rerun()
+        else:
+            st.error("Wrong password.")
+    st.stop()
+
+
+def render_tool_log(logs: list) -> None:
+    if not logs:
+        return
+    with st.expander(f"🔧 {len(logs)} SPARQL query/queries executed"):
+        for log in logs:
+            st.code(
+                f"Tool: {log['tool']}\n"
+                f"Args: {json.dumps(log['args'], indent=2)}\n\n"
+                f"Result preview:\n{log.get('result_preview', '')}",
+                language="text"
+            )
+
+
 # ── Streamlit UI ───────────────────────────────────────────────────────────────
 st.title("🤖 AI FAIR Analysis Chat")
+require_password()
+
 st.markdown(
     "Ask questions about FAIR evaluation results stored in Fuseki. "
     "The assistant can query any dataset directly to answer your questions."
@@ -468,8 +583,8 @@ st.markdown(
 # Session state
 if "chat_messages" not in st.session_state:
     st.session_state["chat_messages"] = []
-if "tool_logs" not in st.session_state:
-    st.session_state["tool_logs"] = []
+if "user_message_count" not in st.session_state:
+    st.session_state["user_message_count"] = 0  # not reset by "Clear conversation"
 
 # ── Sidebar ────────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -482,33 +597,14 @@ with st.sidebar:
         key="backend",
     )
 
+    ollama_model = ""
     if backend == "Ollama (local)":
-        st.markdown("**Ollama connection**")
-        if OLLAMA_HOST:
-            ollama_ip = OLLAMA_HOST
-            ollama_port = OLLAMA_PORT
-            st.session_state["ollama_ip"] = ollama_ip
-            st.session_state["ollama_port"] = ollama_port
-            st.caption(f"🖥️ `{ollama_ip}:{ollama_port}` (from .env)")
+        if not OLLAMA_HOST:
+            st.warning("Local Ollama is not configured on this server.")
         else:
-            ollama_ip = st.text_input(
-                "Office PC IP address",
-                value=st.session_state.get("ollama_ip", ""),
-                placeholder="e.g. 192.168.1.42",
-                key="ollama_ip",
-            )
-            ollama_port = st.number_input(
-                "Port",
-                min_value=1,
-                max_value=65535,
-                value=int(st.session_state.get("ollama_port", 11434)),
-                key="ollama_port",
-            )
-
-        ollama_model = ""
-        if ollama_ip:
-            with st.spinner("Fetching models from Ollama…"):
-                available_models = fetch_ollama_models(ollama_ip, int(ollama_port))
+            st.caption("🖥️ Local Ollama server")
+            with st.spinner("Fetching models…"):
+                available_models = fetch_ollama_models(OLLAMA_HOST, OLLAMA_PORT)
 
             if available_models:
                 ollama_model = st.selectbox(
@@ -525,39 +621,19 @@ with st.sidebar:
                 else:
                     st.success(f"✅ Tool calling supported for `{ollama_model}`")
             else:
-                st.error(
-                    f"Could not reach Ollama at `{ollama_ip}:{ollama_port}`. "
-                    "Check IP, port, and VPN connection."
-                )
-                ollama_model = st.text_input(
-                    "Model name (manual fallback)",
-                    placeholder="e.g. llama3.1",
-                    key="ollama_model",
-                )
-        else:
-            st.info("Enter the office PC IP address above.")
-            ollama_model = st.text_input(
-                "Model name",
-                placeholder="e.g. llama3.1",
-                key="ollama_model",
-            )
+                st.error("The local Ollama server is currently unavailable.")
     else:
-        ollama_ip = ""
-        ollama_port = 11434
-        ollama_model = ""
         st.caption(f"Using OpenRouter model: `{OPENROUTER_MODEL}`")
 
     st.markdown("---")
     st.subheader("Chat Controls")
     if st.button("🗑️ Clear conversation"):
         st.session_state["chat_messages"] = []
-        st.session_state["tool_logs"] = []
         st.rerun()
 
     st.markdown("---")
     st.subheader("Available Datasets")
-    datasets_info = list_fuseki_datasets()
-    st.caption(datasets_info)
+    st.caption(list_fuseki_datasets())
 
     st.markdown("---")
     st.subheader("Example Questions")
@@ -575,56 +651,45 @@ with st.sidebar:
             st.rerun()
 
 # ── Chat rendering ─────────────────────────────────────────────────────────────
-for i, msg in enumerate(st.session_state["chat_messages"]):
+for msg in st.session_state["chat_messages"]:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
-        if msg["role"] == "assistant" and i < len(st.session_state["tool_logs"]):
-            logs = st.session_state["tool_logs"][i]
-            if logs:
-                with st.expander(f"🔧 {len(logs)} SPARQL query/queries executed"):
-                    for log in logs:
-                        st.code(
-                            f"Tool: {log['tool']}\n"
-                            f"Args: {json.dumps(log['args'], indent=2)}\n\n"
-                            f"Result preview:\n{log.get('result_preview', '')}",
-                            language="text"
-                        )
+        if msg["role"] == "assistant":
+            render_tool_log(msg.get("tool_log"))
 
 # Handle example button click
 pending = st.session_state.pop("_pending_input", None)
 
-# Chat input
-user_input = st.chat_input("Ask about your FAIR evaluation results...") or pending
+# Chat input (disabled once the per-session limit is reached)
+limit_reached = st.session_state["user_message_count"] >= MAX_USER_MESSAGES
+if limit_reached:
+    st.warning("Message limit for this session reached. Please reload the page to start a new session.")
+user_input = st.chat_input("Ask about your FAIR evaluation results...", disabled=limit_reached) or pending
 
-if user_input:
+if user_input and not limit_reached:
+    st.session_state["user_message_count"] += 1
     st.session_state["chat_messages"].append({"role": "user", "content": user_input})
 
     with st.chat_message("user"):
         st.markdown(user_input)
 
+    # Only send the last MAX_HISTORY messages (role + content only), starting with a user message
+    history = st.session_state["chat_messages"][-MAX_HISTORY:]
+    while history and history[0]["role"] != "user":
+        history = history[1:]
     api_messages = [{"role": "system", "content": SYSTEM_PROMPT}]
-    for msg in st.session_state["chat_messages"]:
-        api_messages.append({"role": msg["role"], "content": msg["content"]})
+    api_messages += [{"role": m["role"], "content": m["content"]} for m in history]
 
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             reply, tool_log = call_llm(
                 messages=api_messages,
                 backend=st.session_state.get("backend", "OpenRouter"),
-                ollama_ip=st.session_state.get("ollama_ip", ""),
-                ollama_port=int(st.session_state.get("ollama_port", 11434)),
-                ollama_model=st.session_state.get("ollama_model", ""),
+                ollama_model=ollama_model,
             )
         st.markdown(reply)
-        if tool_log:
-            with st.expander(f"🔧 {len(tool_log)} SPARQL query/queries executed"):
-                for log in tool_log:
-                    st.code(
-                        f"Tool: {log['tool']}\n"
-                        f"Args: {json.dumps(log['args'], indent=2)}\n\n"
-                        f"Result preview:\n{log.get('result_preview', '')}",
-                        language="text"
-                    )
+        render_tool_log(tool_log)
 
-    st.session_state["chat_messages"].append({"role": "assistant", "content": reply})
-    st.session_state["tool_logs"].append(tool_log)
+    st.session_state["chat_messages"].append(
+        {"role": "assistant", "content": reply, "tool_log": tool_log}
+    )

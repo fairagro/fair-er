@@ -10,3 +10,6 @@ baseUrlPath = ""               # uncomment this line for root /
 
 [browser]
 # serverAddress = "daten.ktbl.de"
+
+ [client]
+  showErrorDetails = "none"

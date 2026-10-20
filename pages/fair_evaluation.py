@@ -2,6 +2,7 @@ import io
 import os
 import threading
 import zipfile
+import hmac
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime  # For tracking start and end times
 
@@ -397,71 +398,104 @@ if rdf_graph is not None:
             mime="application/zip"
         )
 
-# ── Upload to Fuseki (demo dataset) ────────────────────────────────────────────
+# --- Upload to Fuseki (demo dataset) ---
+# Disabled unless UPLOAD_PASSWORD is set in the environment (secure by default).
 if st.session_state["dqv_by_doi"]:
     st.markdown("---")
     st.subheader("Upload to Fuseki")
 
-    clear_before_upload = st.checkbox("Clear all existing data in demo dataset before uploading", value=True)
+    FUSEKI_URL = os.environ.get("FUSEKI_URL", "http://fuseki:3030")
+    # Prefer dedicated write credentials for the demo dataset; fall back to the admin account.
+    FUSEKI_USER = os.environ.get("FUSEKI_UPLOAD_USER") or os.environ.get("FUSEKI_USER", "admin")
+    FUSEKI_PASSWORD = os.environ.get("FUSEKI_UPLOAD_PASSWORD") or os.environ.get("FUSEKI_PASSWORD", "")
+    FUSEKI_DATASET = "demo"  # fixed on purpose: never taken from user input
+    UPLOAD_PASSWORD = os.environ.get("UPLOAD_PASSWORD", "")
 
-    if st.button("⬆ Upload all results to Fuseki (demo dataset)"):
-        # Optionally clear all existing data in the demo dataset first
-        if clear_before_upload:
-            try:
-                clear_response = requests.post(
-                    f"{FUSEKI_URL}/{FUSEKI_DATASET}/update",
-                    data="CLEAR ALL",
-                    headers={"Content-Type": "application/sparql-update"},
-                    auth=(FUSEKI_USER, FUSEKI_PASSWORD),
-                    timeout=30,
-                )
-                if clear_response.status_code not in (200, 201, 204):
-                    st.error(f"Failed to clear demo dataset: HTTP {clear_response.status_code}: {clear_response.text[:200]}")
-                    st.stop()
-            except Exception as e:
-                st.error(f"Failed to clear demo dataset: {e}")
-                st.stop()
+    upload_allowed = False
+    if not UPLOAD_PASSWORD:
+        st.info("Upload to Fuseki is disabled on this server.")
+    elif st.session_state.get("upload_authed"):
+        upload_allowed = True
+    else:
+        upload_pw = st.text_input("Upload password", type="password", key="upload_pw_input")
+        if upload_pw:
+            if hmac.compare_digest(upload_pw.encode("utf-8"), UPLOAD_PASSWORD.encode("utf-8")):
+                st.session_state["upload_authed"] = True
+                st.rerun()
+            else:
+                st.error("Wrong password.")
 
-        upload_results = []
-        progress_fuseki = st.progress(0)
-        total_uploads = len(st.session_state["dqv_by_doi"])
+    if upload_allowed:
+        clear_before_upload = st.checkbox("Clear all existing data in demo dataset before uploading", value=True)
 
-        for i, (doi, rdf_g) in enumerate(st.session_state["dqv_by_doi"].items(), start=1):
-            try:
-                turtle_data = rdf_g.serialize(format="turtle")
+        if st.button("⬆ Upload all results to Fuseki (demo dataset)"):
+            import requests as _requests
 
-                response = requests.post(
-                    f"{FUSEKI_URL}/{FUSEKI_DATASET}/data",
-                    data=turtle_data.encode("utf-8") if isinstance(turtle_data, str) else turtle_data,
-                    headers={"Content-Type": "text/turtle"},
-                    auth=(FUSEKI_USER, FUSEKI_PASSWORD),
-                    timeout=30,
-                )
-                if response.status_code in (200, 201, 204):
-                    upload_results.append(("success", doi, f"HTTP {response.status_code}"))
-                else:
-                    upload_results.append(("error", doi, f"HTTP {response.status_code}: {response.text[:200]}"))
-            except Exception as e:
-                upload_results.append(("error", doi, str(e)))
+            clear_ok = True
 
-            progress_fuseki.progress(int(i / total_uploads * 100))
+            # Optionally clear all existing data in the demo dataset first
+            if clear_before_upload:
+                try:
+                    clear_response = _requests.post(
+                        f"{FUSEKI_URL}/{FUSEKI_DATASET}/update",
+                        data="CLEAR ALL",
+                        headers={"Content-Type": "application/sparql-update"},
+                        auth=(FUSEKI_USER, FUSEKI_PASSWORD),
+                        timeout=30,
+                    )
+                    if clear_response.status_code not in (200, 201, 204):
+                        print(f"[upload] clear failed: HTTP {clear_response.status_code}: {clear_response.text[:300]}")
+                        st.error(f"Failed to clear the demo dataset (HTTP {clear_response.status_code}).")
+                        clear_ok = False
+                except Exception as e:
+                    print(f"[upload] clear failed: {e}")
+                    st.error("Failed to clear the demo dataset: the triplestore is not reachable.")
+                    clear_ok = False
 
-        # Show results
-        success_count = sum(1 for r in upload_results if r[0] == "success")
-        error_count = len(upload_results) - success_count
+            if clear_ok:
+                upload_results = []
+                progress_fuseki = st.progress(0)
+                total_uploads = len(st.session_state["dqv_by_doi"])
 
-        if success_count:
-            st.success(f"✅ Successfully uploaded {success_count}/{total_uploads} graphs to `{FUSEKI_DATASET}` dataset.")
-            with st.expander("Uploaded graphs"):
-                for status, doi, detail in upload_results:
-                    if status == "success":
-                        st.write(f"**{doi}** → `{detail}`")
-        if error_count:
-            st.error(f"❌ {error_count} upload(s) failed.")
-            with st.expander("Upload errors"):
-                for status, doi, detail in upload_results:
-                    if status == "error":
-                        st.write(f"**{doi}**: {detail}")
+                for i, (doi, rdf_g) in enumerate(st.session_state["dqv_by_doi"].items(), start=1):
+                    try:
+                        turtle_data = rdf_g.serialize(format="turtle")
+
+                        response = _requests.post(
+                            f"{FUSEKI_URL}/{FUSEKI_DATASET}/data",
+                            data=turtle_data.encode("utf-8") if isinstance(turtle_data, str) else turtle_data,
+                            headers={"Content-Type": "text/turtle"},
+                            auth=(FUSEKI_USER, FUSEKI_PASSWORD),
+                            timeout=30,
+                        )
+                        if response.status_code in (200, 201, 204):
+                            upload_results.append(("success", doi, f"HTTP {response.status_code}"))
+                        else:
+                            print(f"[upload] {doi}: HTTP {response.status_code}: {response.text[:300]}")
+                            upload_results.append(("error", doi, f"HTTP {response.status_code}"))
+                    except Exception as e:
+                        print(f"[upload] {doi}: {e}")
+                        upload_results.append(("error", doi, "upload failed (see server log)"))
+
+                    progress_fuseki.progress(int(i / total_uploads * 100))
+
+                # Show results
+                success_count = sum(1 for r in upload_results if r[0] == "success")
+                error_count = len(upload_results) - success_count
+
+                if success_count:
+                    st.success(
+                        f"✅ Successfully uploaded {success_count}/{total_uploads} graphs to the `{FUSEKI_DATASET}` dataset.")
+                    with st.expander("Uploaded graphs"):
+                        for status, doi, detail in upload_results:
+                            if status == "success":
+                                st.write(f"**{doi}** → `{detail}`")
+                if error_count:
+                    st.error(f"❌ {error_count} upload(s) failed.")
+                    with st.expander("Upload errors"):
+                        for status, doi, detail in upload_results:
+                            if status == "error":
+                                st.write(f"**{doi}**: {detail}")
 
 # Footer
 st.markdown("---")
